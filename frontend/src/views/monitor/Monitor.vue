@@ -64,12 +64,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { saveMonitorTask, getMonitorTaskList, toggleMonitorTaskStatus, deleteMonitorTask } from '@/api/monitor'
 
-const taskList = ref([
-  { id: 1, goodsName: '商品A', platform: 'taobao', currentPrice: 150.00, targetPrice: 120.00, status: 1 }
-])
+const taskList = ref([])
 
 const dialogVisible = ref(false)
 const taskForm = reactive({
@@ -80,38 +79,84 @@ const taskForm = reactive({
   targetPrice: 0
 })
 
+const loadTaskList = async () => {
+  try {
+    const res = await getMonitorTaskList()
+    if (res.code === 200) {
+      taskList.value = res.data || []
+    } else {
+      ElMessage.error(res.msg || '获取监控任务列表失败')
+    }
+  } catch (error) {
+    console.error('获取监控任务列表失败:', error)
+    ElMessage.error('获取监控任务列表失败')
+  }
+}
+
+onMounted(() => {
+  loadTaskList()
+})
+
 const handleAddTask = () => {
   dialogVisible.value = true
 }
 
-const submitTask = () => {
-  dialogVisible.value = false
-  ElMessage.success('监控任务添加成功')
+const submitTask = async () => {
+  try {
+    const res = await saveMonitorTask(taskForm)
+    if (res.code === 200) {
+      dialogVisible.value = false
+      ElMessage.success('监控任务添加成功')
+      loadTaskList()
+    } else {
+      ElMessage.error(res.msg || '添加失败')
+    }
+  } catch (error) {
+    console.error('添加监控任务失败:', error)
+    ElMessage.error('添加监控任务失败')
+  }
 }
 
-const toggleStatus = (row) => {
+const toggleStatus = async (row) => {
   const newStatus = row.status === 1 ? 0 : 1
   ElMessageBox.confirm(`确定要${newStatus === 1 ? '启用' : '禁用'}此监控任务吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    row.status = newStatus
-    ElMessage.success('操作成功')
+  }).then(async () => {
+    try {
+      const res = await toggleMonitorTaskStatus(row.id, newStatus)
+      if (res.code === 200) {
+        row.status = newStatus
+        ElMessage.success('操作成功')
+      } else {
+        ElMessage.error(res.msg || '操作失败')
+      }
+    } catch (error) {
+      console.error('切换状态失败:', error)
+      ElMessage.error('切换状态失败')
+    }
   })
 }
 
-const deleteTask = (id) => {
+const deleteTask = async (id) => {
   ElMessageBox.confirm('确定要删除此监控任务吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    const index = taskList.value.findIndex(t => t.id === id)
-    if (index > -1) {
-      taskList.value.splice(index, 1)
+  }).then(async () => {
+    try {
+      const res = await deleteMonitorTask(id)
+      if (res.code === 200) {
+        ElMessage.success('删除成功')
+        loadTaskList()
+      } else {
+        ElMessage.error(res.msg || '删除失败')
+      }
+    } catch (error) {
+      console.error('删除监控任务失败:', error)
+      ElMessage.error('删除监控任务失败')
     }
-    ElMessage.success('删除成功')
   })
 }
 </script>

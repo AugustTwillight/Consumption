@@ -43,27 +43,63 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { getMessageList, markAsRead, markAllAsRead } from '@/api/message'
 
-const messageList = ref([
-  { id: 1, messageType: 'price_alert', title: '价格监控告警', content: '商品【商品A】价格已降至¥119，低于您的目标价¥120！', isRead: 0, createTime: '2026-01-01 10:00:00' },
-  { id: 2, messageType: 'comment_notice', title: '评论通知', content: '您的帖子【双十一捡漏攻略】收到了一条新评论', isRead: 1, createTime: '2025-12-31 15:00:00' }
-])
+const messageList = ref([])
 
-const markAsRead = (id) => {
-  const message = messageList.value.find(m => m.id === id)
-  if (message && message.isRead === 0) {
-    message.isRead = 1
-    ElMessage.success('标记已读成功')
+const loadMessageList = async () => {
+  try {
+    const res = await getMessageList()
+    if (res.code === 200) {
+      messageList.value = res.data || []
+    } else {
+      ElMessage.error(res.msg || '获取消息列表失败')
+    }
+  } catch (error) {
+    console.error('获取消息列表失败:', error)
+    ElMessage.error('获取消息列表失败')
   }
 }
 
-const markAllAsRead = () => {
-  messageList.value.forEach(msg => {
-    msg.isRead = 1
-  })
-  ElMessage.success('全部标记已读成功')
+onMounted(() => {
+  loadMessageList()
+})
+
+const markAsReadApi = async (id) => {
+  try {
+    const res = await markAsRead(id)
+    if (res.code === 200) {
+      const message = messageList.value.find(m => m.id === id)
+      if (message && message.isRead === 0) {
+        message.isRead = 1
+      }
+      ElMessage.success('标记已读成功')
+    } else {
+      ElMessage.error(res.msg || '标记已读失败')
+    }
+  } catch (error) {
+    console.error('标记已读失败:', error)
+    ElMessage.error('标记已读失败')
+  }
+}
+
+const markAllAsReadApi = async () => {
+  try {
+    const res = await markAllAsRead()
+    if (res.code === 200) {
+      messageList.value.forEach(msg => {
+        msg.isRead = 1
+      })
+      ElMessage.success('全部标记已读成功')
+    } else {
+      ElMessage.error(res.msg || '全部标记已读失败')
+    }
+  } catch (error) {
+    console.error('全部标记已读失败:', error)
+    ElMessage.error('全部标记已读失败')
+  }
 }
 </script>
 

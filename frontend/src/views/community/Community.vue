@@ -57,12 +57,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { createPost, getPostList, likePostApi, collectPostApi } from '@/api/community'
 
-const postList = ref([
-  { id: 1, title: '双十一捡漏攻略', content: '分享一些双十一凑单的好方法...', userId: 1, likeCount: 15, collectCount: 8, createTime: '2026-01-01 10:00:00' }
-])
+const postList = ref([])
 
 const dialogVisible = ref(false)
 const postForm = reactive({
@@ -72,21 +71,72 @@ const postForm = reactive({
   goodsLink: ''
 })
 
+const loadPostList = async () => {
+  try {
+    const res = await getPostList()
+    if (res.code === 200) {
+      postList.value = res.data || []
+    } else {
+      ElMessage.error(res.msg || '获取帖子列表失败')
+    }
+  } catch (error) {
+    console.error('获取帖子列表失败:', error)
+    ElMessage.error('获取帖子列表失败')
+  }
+}
+
+onMounted(() => {
+  loadPostList()
+})
+
 const handleCreatePost = () => {
   dialogVisible.value = true
 }
 
-const submitPost = () => {
-  dialogVisible.value = false
-  ElMessage.success('帖子发布成功，等待审核')
+const submitPost = async () => {
+  try {
+    const res = await createPost(postForm)
+    if (res.code === 200) {
+      dialogVisible.value = false
+      ElMessage.success('帖子发布成功，等待审核')
+      loadPostList()
+    } else {
+      ElMessage.error(res.msg || '发布失败')
+    }
+  } catch (error) {
+    console.error('发布帖子失败:', error)
+    ElMessage.error('发布帖子失败')
+  }
 }
 
-const likePost = (id) => {
-  ElMessage.success('点赞成功')
+const likePost = async (id) => {
+  try {
+    const res = await likePostApi(id)
+    if (res.code === 200) {
+      ElMessage.success('点赞成功')
+      loadPostList()
+    } else {
+      ElMessage.error(res.msg || '点赞失败')
+    }
+  } catch (error) {
+    console.error('点赞失败:', error)
+    ElMessage.error('点赞失败')
+  }
 }
 
-const collectPost = (id) => {
-  ElMessage.success('收藏成功')
+const collectPost = async (id) => {
+  try {
+    const res = await collectPostApi(id)
+    if (res.code === 200) {
+      ElMessage.success('收藏成功')
+      loadPostList()
+    } else {
+      ElMessage.error(res.msg || '收藏失败')
+    }
+  } catch (error) {
+    console.error('收藏失败:', error)
+    ElMessage.error('收藏失败')
+  }
 }
 </script>
 

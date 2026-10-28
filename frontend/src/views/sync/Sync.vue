@@ -93,7 +93,8 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { pullSyncData, pushSyncData } from '@/api/sync'
 
 const pullTable = ref('calc_plan')
 const lastWaterTime = ref('2026-01-01 00:00:00')
@@ -111,21 +112,43 @@ const conflictData = reactive({
   localVersion: null
 })
 
-const handlePull = () => {
-  ElMessage.success('拉取成功')
-  // 实际应调用后端API: /api/v1/sync/pull
+const handlePull = async () => {
+  try {
+    const res = await pullSyncData(pullTable.value, lastWaterTime.value)
+    if (res.code === 200) {
+      ElMessage.success('拉取成功')
+      // 实际应更新本地数据和水位时间
+    } else {
+      ElMessage.error(res.msg || '拉取失败')
+    }
+  } catch (error) {
+    console.error('拉取数据失败:', error)
+    ElMessage.error('拉取数据失败')
+  }
 }
 
-const handlePush = () => {
-  // 模拟冲突检测
-  const hasConflict = Math.random() > 0.7
-  if (hasConflict) {
-    conflictData.cloudDataVersion = 2
-    conflictData.localVersion = localVersion.value
-    conflictDialogVisible.value = true
-  } else {
-    ElMessage.success('推送成功')
-    localVersion.value++
+const handlePush = async () => {
+  try {
+    const res = await pushSyncData({
+      tableName: pushTable.value,
+      localVersion: localVersion.value,
+      clientData: {}
+    })
+    if (res.code === 200) {
+      if (res.data.conflict) {
+        conflictData.cloudDataVersion = res.data.cloudDataVersion
+        conflictData.localVersion = localVersion.value
+        conflictDialogVisible.value = true
+      } else {
+        ElMessage.success('推送成功')
+        localVersion.value = res.data.newDataVersion || localVersion.value + 1
+      }
+    } else {
+      ElMessage.error(res.msg || '推送失败')
+    }
+  } catch (error) {
+    console.error('推送数据失败:', error)
+    ElMessage.error('推送数据失败')
   }
 }
 
@@ -133,8 +156,10 @@ const handleConflictResolve = (strategy) => {
   conflictDialogVisible.value = false
   if (strategy === 'local') {
     ElMessage.success('已以本地数据覆盖云端')
+    // 实际应执行本地数据推送到云端的逻辑
   } else {
     ElMessage.success('已以云端数据覆盖本地')
+    // 实际应执行云端数据拉取到本地的逻辑
   }
 }
 </script>

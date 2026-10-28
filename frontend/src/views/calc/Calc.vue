@@ -95,13 +95,14 @@
 <script setup>
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { calculateCalcPlan, saveCalcPlan } from '@/api/calcPlan'
 
 const goodsList = ref([
-  { goodsName: '商品A', platform: 'taobao', unitPrice: 99.00, quantity: 1 }
+  { goodsName: '商品A', platform: 'taobao', unitPrice: 99.00, quantity: 1, goodsLink: '' }
 ])
 
 const ruleList = ref([
-  { ruleType: 'full_reduce', ruleCondition: 200.00, ruleDiscount: 30.00, isStackable: 1 }
+  { ruleType: 'full_reduce', ruleCondition: 200.00, ruleDiscount: 30.00, isStackable: 1, categoryLimit: '' }
 ])
 
 const calcResult = ref(null)
@@ -111,7 +112,8 @@ const addGoods = () => {
     goodsName: '新商品',
     platform: 'taobao',
     unitPrice: 0.00,
-    quantity: 1
+    quantity: 1,
+    goodsLink: ''
   })
 }
 
@@ -124,7 +126,8 @@ const addRule = () => {
     ruleType: 'full_reduce',
     ruleCondition: 0.00,
     ruleDiscount: 0.00,
-    isStackable: 1
+    isStackable: 1,
+    categoryLimit: ''
   })
 }
 
@@ -132,19 +135,79 @@ const removeRule = (index) => {
   ruleList.value.splice(index, 1)
 }
 
-const handleCalculate = () => {
-  // 简化处理，实际应调用后端API
-  calcResult.value = {
-    totalAmount: 99.00,
-    totalDiscount: 0.00,
-    finalAmount: 99.00,
-    riskTags: []
+const handleCalculate = async () => {
+  try {
+    const goodsListData = goodsList.value.map(g => ({
+      goodsName: g.goodsName,
+      goodsLink: g.goodsLink || '',
+      platform: g.platform,
+      unitPrice: g.unitPrice,
+      quantity: g.quantity
+    }))
+    const ruleListData = ruleList.value.map(r => ({
+      ruleType: r.ruleType,
+      ruleCondition: r.ruleCondition,
+      ruleDiscount: r.ruleDiscount,
+      isStackable: r.isStackable,
+      categoryLimit: r.categoryLimit || ''
+    }))
+
+    const res = await calculateCalcPlan({
+      planName: '临时计算方案',
+      goodsList: goodsListData,
+      ruleList: ruleListData
+    })
+    if (res.code === 200) {
+      calcResult.value = res.data
+      ElMessage.success('计算完成')
+    } else {
+      ElMessage.error(res.msg || '计算失败')
+    }
+  } catch (error) {
+    console.error('计算失败:', error)
+    ElMessage.error('计算失败，请检查商品和规则数据')
   }
-  ElMessage.success('计算完成')
 }
 
-const savePlan = () => {
-  ElMessage.success('方案保存成功')
+const savePlan = async () => {
+  if (!calcResult.value) {
+    ElMessage.warning('请先执行计算')
+    return
+  }
+  try {
+    const goodsListData = goodsList.value.map(g => ({
+      goodsName: g.goodsName,
+      goodsLink: g.goodsLink || '',
+      platform: g.platform,
+      unitPrice: g.unitPrice,
+      quantity: g.quantity
+    }))
+    const ruleListData = ruleList.value.map(r => ({
+      ruleType: r.ruleType,
+      ruleCondition: r.ruleCondition,
+      ruleDiscount: r.ruleDiscount,
+      isStackable: r.isStackable,
+      categoryLimit: r.categoryLimit || ''
+    }))
+
+    const res = await saveCalcPlan({
+      planName: calcResult.value.planName || '新凑单方案',
+      goodsList: goodsListData,
+      ruleList: ruleListData,
+      totalAmount: calcResult.value.totalAmount,
+      totalDiscount: calcResult.value.totalDiscount,
+      finalAmount: calcResult.value.finalAmount,
+      riskTags: calcResult.value.riskTags ? calcResult.value.riskTags.join(',') : ''
+    })
+    if (res.code === 200) {
+      ElMessage.success('方案保存成功，ID: ' + res.data)
+    } else {
+      ElMessage.error(res.msg || '保存失败')
+    }
+  } catch (error) {
+    console.error('保存失败:', error)
+    ElMessage.error('保存失败')
+  }
 }
 </script>
 

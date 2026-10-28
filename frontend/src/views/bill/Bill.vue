@@ -88,18 +88,17 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { createBill, getBillList, deleteBillApi, getMonthlyReport } from '@/api/bill'
 
-const billList = ref([
-  { id: 1, billName: '双十一购物账单', actualAmount: 250.00, expectedCycle: 30, tags: '家电,促销', createTime: '2026-01-01 10:00:00' }
-])
+const billList = ref([])
 
 const reportMonth = ref('2026-01')
 const reportData = ref({
-  totalAmount: 2500.00,
-  billCount: 5,
-  avgDailyCost: 8.33
+  totalAmount: 0.00,
+  billCount: 0,
+  avgDailyCost: 0.00
 })
 
 const dialogVisible = ref(false)
@@ -111,26 +110,83 @@ const billForm = reactive({
   remarks: ''
 })
 
+const loadBillList = async () => {
+  try {
+    const res = await getBillList()
+    if (res.code === 200) {
+      billList.value = res.data || []
+    } else {
+      ElMessage.error(res.msg || '获取账单列表失败')
+    }
+  } catch (error) {
+    console.error('获取账单列表失败:', error)
+    ElMessage.error('获取账单列表失败')
+  }
+}
+
+const loadMonthlyReport = async () => {
+  if (!reportMonth.value) return
+  const [year, month] = reportMonth.value.split('-').map(Number)
+  try {
+    const res = await getMonthlyReport(year, month)
+    if (res.code === 200) {
+      reportData.value = res.data || { totalAmount: 0.00, billCount: 0, avgDailyCost: 0.00 }
+    } else {
+      ElMessage.error(res.msg || '获取月度报表失败')
+    }
+  } catch (error) {
+    console.error('获取月度报表失败:', error)
+    ElMessage.error('获取月度报表失败')
+  }
+}
+
+onMounted(() => {
+  loadBillList()
+  loadMonthlyReport()
+})
+
+watch(reportMonth, () => {
+  loadMonthlyReport()
+})
+
 const handleAddBill = () => {
   dialogVisible.value = true
 }
 
-const submitBill = () => {
-  dialogVisible.value = false
-  ElMessage.success('账单添加成功')
+const submitBill = async () => {
+  try {
+    const res = await createBill(billForm)
+    if (res.code === 200) {
+      dialogVisible.value = false
+      ElMessage.success('账单添加成功')
+      loadBillList()
+    } else {
+      ElMessage.error(res.msg || '添加失败')
+    }
+  } catch (error) {
+    console.error('添加账单失败:', error)
+    ElMessage.error('添加账单失败')
+  }
 }
 
-const deleteBill = (id) => {
+const deleteBill = async (id) => {
   ElMessageBox.confirm('确定要删除此账单吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    const index = billList.value.findIndex(b => b.id === id)
-    if (index > -1) {
-      billList.value.splice(index, 1)
+  }).then(async () => {
+    try {
+      const res = await deleteBillApi(id)
+      if (res.code === 200) {
+        ElMessage.success('删除成功')
+        loadBillList()
+      } else {
+        ElMessage.error(res.msg || '删除失败')
+      }
+    } catch (error) {
+      console.error('删除账单失败:', error)
+      ElMessage.error('删除账单失败')
     }
-    ElMessage.success('删除成功')
   })
 }
 </script>
