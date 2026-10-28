@@ -36,6 +36,10 @@
           <el-icon><Refresh /></el-icon>
           <span>同步管理</span>
         </el-menu-item>
+        <el-menu-item index="/point">
+          <el-icon><Medal /></el-icon>
+          <span>积分中心</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     
@@ -67,11 +71,12 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { logout } from '@/api/auth'
 import { useUserStore } from '@/store/user'
+import { connectWebSocket, disconnectWebSocket } from '@/utils/websocket'
 
 const router = useRouter()
 const route = useRoute()
@@ -94,6 +99,14 @@ const pageTitle = computed(() => {
 const unreadCount = computed(() => {
   // 简化处理，实际应从消息接口获取
   return 0
+})
+
+onMounted(() => {
+  connectWebSocket()
+})
+
+onUnmounted(() => {
+  disconnectWebSocket()
 })
 
 const handleCommand = (command) => {

@@ -13,7 +13,9 @@
     "pinia": "^2.1.7",
     "element-plus": "^2.5.0",
     "axios": "^1.6.0",
-    "dayjs": "^1.11.10"
+    "dayjs": "^1.11.10",
+    "sockjs-client": "^1.6.1",
+    "@stomp/stompjs": "^7.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

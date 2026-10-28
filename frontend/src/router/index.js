@@ -48,6 +48,11 @@ const routes = [
         path: 'sync',
         name: 'Sync',
         component: () => import('@/views/sync/Sync.vue')
+      },
+      {
+        path: 'point',
+        name: 'Point',
+        component: () => import('@/views/point/Point.vue')
       }
     ]
   }
