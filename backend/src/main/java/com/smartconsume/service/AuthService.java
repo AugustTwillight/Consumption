@@ -6,6 +6,7 @@ import com.smartconsume.common.constant.Constants;
 import com.smartconsume.common.exception.BusinessException;
 import com.smartconsume.common.redis.RedisService;
 import com.smartconsume.common.result.ResultCode;
+import com.smartconsume.common.service.CacheService;
 import com.smartconsume.common.service.RateLimitService;
 import com.smartconsume.common.util.JwtUtil;
 import com.smartconsume.entity.SysUser;
@@ -24,12 +25,14 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final RedisService redisService;
     private final RateLimitService rateLimitService;
+    private final CacheService cacheService;
 
-    public AuthService(SysUserMapper sysUserMapper, JwtUtil jwtUtil, RedisService redisService, RateLimitService rateLimitService) {
+    public AuthService(SysUserMapper sysUserMapper, JwtUtil jwtUtil, RedisService redisService, RateLimitService rateLimitService, CacheService cacheService) {
         this.sysUserMapper = sysUserMapper;
         this.jwtUtil = jwtUtil;
         this.redisService = redisService;
         this.rateLimitService = rateLimitService;
+        this.cacheService = cacheService;
     }
 
     /**
@@ -125,6 +128,18 @@ public class AuthService {
      * @return 用户信息
      */
     public SysUser getUserById(Long userId) {
-        return sysUserMapper.selectById(userId);
+        String cacheKey = "user:info:" + userId;
+        // 尝试从缓存获取
+        SysUser user = cacheService.get(cacheKey, SysUser.class);
+        if (user != null) {
+            return user;
+        }
+        // 缓存未命中，从数据库查询
+        user = sysUserMapper.selectById(userId);
+        if (user != null) {
+            // 存入缓存，过期时间30分钟
+            cacheService.set(cacheKey, user, 1800);
+        }
+        return user;
     }
 }
