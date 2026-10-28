@@ -15,7 +15,8 @@
     "axios": "^1.6.0",
     "dayjs": "^1.11.10",
     "sockjs-client": "^1.6.1",
-    "@stomp/stompjs": "^7.0.0"
+    "@stomp/stompjs": "^7.0.0",
+    "echarts": "^5.4.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

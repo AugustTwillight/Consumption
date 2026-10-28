@@ -64,18 +64,16 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="priceRecordsDialogVisible" title="价格历史记录" width="600px">
-      <el-table :data="priceRecordsList" style="width: 100%">
-        <el-table-column prop="price" label="价格" width="120" />
-        <el-table-column prop="recordTime" label="记录时间" />
-      </el-table>
+    <el-dialog v-model="priceRecordsDialogVisible" title="价格历史记录" width="800px">
+      <div ref="priceChartRef" style="width: 100%; height: 400px;"></div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import * as echarts from 'echarts'
 import { saveMonitorTask, getMonitorTaskList, toggleMonitorTaskStatus, deleteMonitorTask, getMonitorPriceRecords } from '@/api/monitor'
 
 const taskList = ref([])
@@ -92,6 +90,73 @@ const taskForm = reactive({
 const priceRecordsDialogVisible = ref(false)
 const priceRecordsList = ref([])
 const currentTaskId = ref(null)
+const priceChartRef = ref(null)
+let priceChart = null
+
+const initPriceChart = () => {
+  if (!priceChartRef.value) return
+  if (priceChart) {
+    priceChart.dispose()
+  }
+  priceChart = echarts.init(priceChartRef.value)
+
+  const times = priceRecordsList.value.map(record => record.recordTime)
+  const prices = priceRecordsList.value.map(record => record.price)
+
+  const option = {
+    title: {
+      text: '商品价格走势',
+      left: 'center'
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const param = params[0]
+        return `${param.name}<br/>价格: ¥${param.value}`
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: times,
+      axisLabel: {
+        rotate: 45,
+        formatter: (value) => {
+          // 简化时间显示
+          return value.split(' ')[1] || value
+        }
+      }
+    },
+    yAxis: {
+      type: 'value',
+      name: '价格 (¥)'
+    },
+    series: [{
+      data: prices,
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 8,
+      itemStyle: {
+        color: '#409eff'
+      },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+            { offset: 1, color: 'rgba(64, 158, 255, 0.05)' }
+          ]
+        }
+      }
+    }]
+  }
+
+  priceChart.setOption(option)
+}
 
 const loadTaskList = async () => {
   try {
@@ -181,6 +246,9 @@ const viewPriceRecords = async (taskId) => {
     if (res.code === 200) {
       priceRecordsList.value = res.data || []
       priceRecordsDialogVisible.value = true
+      // 等待对话框渲染完成后初始化图表
+      await nextTick()
+      initPriceChart()
     } else {
       ElMessage.error(res.msg || '获取价格历史记录失败')
     }
@@ -189,6 +257,17 @@ const viewPriceRecords = async (taskId) => {
     ElMessage.error('获取价格历史记录失败')
   }
 }
+
+onMounted(() => {
+  loadTaskList()
+})
+
+onUnmounted(() => {
+  if (priceChart) {
+    priceChart.dispose()
+    priceChart = null
+  }
+})
 </script>
 
 <style scoped>
