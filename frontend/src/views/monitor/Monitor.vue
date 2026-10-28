@@ -20,8 +20,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="280">
           <template #default="scope">
+            <el-button size="small" @click="viewPriceRecords(scope.row.id)">
+              价格历史
+            </el-button>
             <el-button size="small" @click="toggleStatus(scope.row)">
               {{ scope.row.status === 1 ? '禁用' : '启用' }}
             </el-button>
@@ -60,13 +63,20 @@
         <el-button type="primary" @click="submitTask">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="priceRecordsDialogVisible" title="价格历史记录" width="600px">
+      <el-table :data="priceRecordsList" style="width: 100%">
+        <el-table-column prop="price" label="价格" width="120" />
+        <el-table-column prop="recordTime" label="记录时间" />
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { saveMonitorTask, getMonitorTaskList, toggleMonitorTaskStatus, deleteMonitorTask } from '@/api/monitor'
+import { saveMonitorTask, getMonitorTaskList, toggleMonitorTaskStatus, deleteMonitorTask, getMonitorPriceRecords } from '@/api/monitor'
 
 const taskList = ref([])
 
@@ -78,6 +88,10 @@ const taskForm = reactive({
   currentPrice: 0,
   targetPrice: 0
 })
+
+const priceRecordsDialogVisible = ref(false)
+const priceRecordsList = ref([])
+const currentTaskId = ref(null)
 
 const loadTaskList = async () => {
   try {
@@ -158,6 +172,22 @@ const deleteTask = async (id) => {
       ElMessage.error('删除监控任务失败')
     }
   })
+}
+
+const viewPriceRecords = async (taskId) => {
+  currentTaskId.value = taskId
+  try {
+    const res = await getMonitorPriceRecords(taskId)
+    if (res.code === 200) {
+      priceRecordsList.value = res.data || []
+      priceRecordsDialogVisible.value = true
+    } else {
+      ElMessage.error(res.msg || '获取价格历史记录失败')
+    }
+  } catch (error) {
+    console.error('获取价格历史记录失败:', error)
+    ElMessage.error('获取价格历史记录失败')
+  }
 }
 </script>
 
