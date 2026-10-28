@@ -1,20 +1,24 @@
 package com.smartconsume.controller;
 
 import com.smartconsume.common.result.Result;
+import com.smartconsume.dto.CommentCreateDTO;
+import com.smartconsume.dto.PostCreateDTO;
 import com.smartconsume.entity.CommunityComment;
 import com.smartconsume.entity.CommunityPost;
 import com.smartconsume.service.CommunityService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 社区控制器
  */
 @RestController
 @RequestMapping("/api/v1/community")
+@Validated
 public class CommunityController {
 
     private final CommunityService communityService;
@@ -26,22 +30,22 @@ public class CommunityController {
     /**
      * 发布帖子
      *
-     * @param request 请求参数 {title, content, images, goodsLink}
+     * @param dto 请求参数
      * @param httpRequest HTTP请求
      * @return 帖子ID
      */
     @PostMapping("/post")
-    public Result<Long> createPost(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    public Result<Long> createPost(@Valid @RequestBody PostCreateDTO dto, HttpServletRequest httpRequest) {
         Long tenantId = (Long) httpRequest.getAttribute("tenantId");
         Long userId = (Long) httpRequest.getAttribute("userId");
 
         CommunityPost post = new CommunityPost();
         post.setTenantId(tenantId);
         post.setUserId(userId);
-        post.setTitle((String) request.get("title"));
-        post.setContent((String) request.get("content"));
-        post.setImages((String) request.get("images"));
-        post.setGoodsLink((String) request.get("goodsLink"));
+        post.setTitle(dto.getTitle());
+        post.setContent(dto.getContent());
+        post.setImages(dto.getImages());
+        post.setGoodsLink(dto.getGoodsLink());
 
         communityService.createPost(post);
         return Result.success(post.getId());
@@ -112,21 +116,21 @@ public class CommunityController {
     /**
      * 发布评论
      *
-     * @param request 请求参数 {postId, parentCommentId, content}
+     * @param dto 请求参数
      * @param httpRequest HTTP请求
      * @return 评论ID
      */
     @PostMapping("/comment")
-    public Result<Long> createComment(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    public Result<Long> createComment(@Valid @RequestBody CommentCreateDTO dto, HttpServletRequest httpRequest) {
         Long tenantId = (Long) httpRequest.getAttribute("tenantId");
         Long userId = (Long) httpRequest.getAttribute("userId");
 
         CommunityComment comment = new CommunityComment();
-        comment.setPostId(((Number) request.get("postId")).longValue());
+        comment.setPostId(dto.getPostId());
         comment.setTenantId(tenantId);
         comment.setUserId(userId);
-        comment.setParentCommentId(request.get("parentCommentId") != null ? ((Number) request.get("parentCommentId")).longValue() : 0L);
-        comment.setContent((String) request.get("content"));
+        comment.setParentCommentId(dto.getParentCommentId() != null ? dto.getParentCommentId() : 0L);
+        comment.setContent(dto.getContent());
 
         communityService.createComment(comment);
         return Result.success(comment.getId());

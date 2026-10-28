@@ -1,20 +1,23 @@
 package com.smartconsume.controller;
 
 import com.smartconsume.common.result.Result;
+import com.smartconsume.dto.BillCreateDTO;
 import com.smartconsume.entity.ConsumeBill;
 import com.smartconsume.service.BillService;
 import com.smartconsume.service.BillService.MonthlyReport;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 消费账单控制器
  */
 @RestController
 @RequestMapping("/api/v1/bill")
+@Validated
 public class BillController {
 
     private final BillService billService;
@@ -26,24 +29,24 @@ public class BillController {
     /**
      * 新增账单
      *
-     * @param request 请求参数 {billName, planId, actualAmount, expectedCycle, tags, remarks}
+     * @param dto 请求参数
      * @param httpRequest HTTP请求
      * @return 账单ID
      */
     @PostMapping("/create")
-    public Result<Long> createBill(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    public Result<Long> createBill(@Valid @RequestBody BillCreateDTO dto, HttpServletRequest httpRequest) {
         Long tenantId = (Long) httpRequest.getAttribute("tenantId");
         Long userId = (Long) httpRequest.getAttribute("userId");
 
         ConsumeBill bill = new ConsumeBill();
         bill.setTenantId(tenantId);
         bill.setUserId(userId);
-        bill.setBillName((String) request.get("billName"));
-        bill.setPlanId(request.get("planId") != null ? ((Number) request.get("planId")).longValue() : null);
-        bill.setActualAmount(new java.math.BigDecimal(request.get("actualAmount").toString()));
-        bill.setExpectedCycle(request.get("expectedCycle") != null ? ((Number) request.get("expectedCycle")).intValue() : null);
-        bill.setTags((String) request.get("tags"));
-        bill.setRemarks((String) request.get("remarks"));
+        bill.setBillName(dto.getBillName());
+        bill.setPlanId(dto.getPlanId());
+        bill.setActualAmount(dto.getActualAmount());
+        bill.setExpectedCycle(dto.getExpectedCycle());
+        bill.setTags(dto.getTags());
+        bill.setRemarks(dto.getRemarks());
 
         billService.createBill(bill);
         return Result.success(bill.getId());

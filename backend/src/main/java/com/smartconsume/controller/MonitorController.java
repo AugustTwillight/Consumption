@@ -1,21 +1,24 @@
 package com.smartconsume.controller;
 
 import com.smartconsume.common.result.Result;
+import com.smartconsume.dto.MonitorTaskSaveDTO;
 import com.smartconsume.entity.MonitorPriceRecord;
 import com.smartconsume.entity.MonitorTask;
 import com.smartconsume.service.MonitorService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 价格监控控制器
  */
 @RestController
 @RequestMapping("/api/v1/monitor")
+@Validated
 public class MonitorController {
 
     private final MonitorService monitorService;
@@ -27,23 +30,23 @@ public class MonitorController {
     /**
      * 添加或更新监控任务
      *
-     * @param request 请求参数 {goodsName, goodsLink, platform, currentPrice, targetPrice}
+     * @param dto 请求参数
      * @param httpRequest HTTP请求
      * @return 任务ID
      */
     @PostMapping("/task")
-    public Result<Long> saveTask(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    public Result<Long> saveTask(@Valid @RequestBody MonitorTaskSaveDTO dto, HttpServletRequest httpRequest) {
         Long tenantId = (Long) httpRequest.getAttribute("tenantId");
         Long userId = (Long) httpRequest.getAttribute("userId");
 
         MonitorTask task = new MonitorTask();
         task.setTenantId(tenantId);
         task.setUserId(userId);
-        task.setGoodsName((String) request.get("goodsName"));
-        task.setGoodsLink((String) request.get("goodsLink"));
-        task.setPlatform((String) request.get("platform"));
-        task.setCurrentPrice(new BigDecimal(request.get("currentPrice").toString()));
-        task.setTargetPrice(new BigDecimal(request.get("targetPrice").toString()));
+        task.setGoodsName(dto.getGoodsName());
+        task.setGoodsLink(dto.getGoodsLink());
+        task.setPlatform(dto.getPlatform());
+        task.setCurrentPrice(dto.getCurrentPrice());
+        task.setTargetPrice(dto.getTargetPrice());
         task.setStatus(1);
 
         monitorService.saveOrUpdateTask(task);

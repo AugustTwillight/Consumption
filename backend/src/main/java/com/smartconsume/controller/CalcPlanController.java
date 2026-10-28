@@ -3,6 +3,10 @@ package com.smartconsume.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.smartconsume.common.constant.Constants;
 import com.smartconsume.common.result.Result;
+import com.smartconsume.dto.CalcPlanCalculateDTO;
+import com.smartconsume.dto.CalcPlanGoodsItemDTO;
+import com.smartconsume.dto.CalcPlanSaveDTO;
+import com.smartconsume.dto.CalcRuleItemDTO;
 import com.smartconsume.entity.CalcPlan;
 import com.smartconsume.entity.CalcPlanGoods;
 import com.smartconsume.entity.CalcRule;
@@ -14,10 +18,14 @@ import com.smartconsume.service.CalculatorService.CalcPlanGoodsDTO;
 import com.smartconsume.service.CalculatorService.CalcResult;
 import com.smartconsume.service.CalculatorService.CalcRuleDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +34,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/calc-plan")
+@Validated
 public class CalcPlanController {
 
     private final CalcPlanMapper calcPlanMapper;
@@ -44,37 +53,35 @@ public class CalcPlanController {
     /**
      * 执行凑单计算
      *
-     * @param request 请求参数 {planName, goodsList, ruleList}
+     * @param dto 请求参数
      * @return 计算结果
      */
     @PostMapping("/calculate")
-    public Result<CalcResult> calculate(@RequestBody Map<String, Object> request) {
-        String planName = (String) request.get("planName");
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> goodsListData = (List<Map<String, Object>>) request.get("goodsList");
-        List<CalcPlanGoodsDTO> goodsList = new java.util.ArrayList<>();
-        for (Map<String, Object> data : goodsListData) {
-            CalcPlanGoodsDTO dto = new CalcPlanGoodsDTO();
-            dto.setGoodsName((String) data.get("goodsName"));
-            dto.setGoodsLink((String) data.get("goodsLink"));
-            dto.setPlatform((String) data.get("platform"));
-            dto.setUnitPrice(new BigDecimal(data.get("unitPrice").toString()));
-            dto.setQuantity(((Number) data.get("quantity")).intValue());
-            goodsList.add(dto);
+    public Result<CalcResult> calculate(@Valid @RequestBody CalcPlanCalculateDTO dto) {
+        List<CalcPlanGoodsDTO> goodsList = new ArrayList<>();
+        if (dto.getGoodsList() != null) {
+            for (CalcPlanGoodsItemDTO item : dto.getGoodsList()) {
+                CalcPlanGoodsDTO dtoItem = new CalcPlanGoodsDTO();
+                dtoItem.setGoodsName(item.getGoodsName());
+                dtoItem.setGoodsLink(item.getGoodsLink());
+                dtoItem.setPlatform(item.getPlatform());
+                dtoItem.setUnitPrice(item.getUnitPrice());
+                dtoItem.setQuantity(item.getQuantity());
+                goodsList.add(dtoItem);
+            }
         }
 
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> ruleListData = (List<Map<String, Object>>) request.get("ruleList");
-        List<CalcRuleDTO> ruleList = new java.util.ArrayList<>();
-        for (Map<String, Object> data : ruleListData) {
-            CalcRuleDTO dto = new CalcRuleDTO();
-            dto.setRuleType((String) data.get("ruleType"));
-            dto.setRuleCondition(new BigDecimal(data.get("ruleCondition").toString()));
-            dto.setRuleDiscount(new BigDecimal(data.get("ruleDiscount").toString()));
-            dto.setIsStackable(((Number) data.get("isStackable")).intValue());
-            dto.setCategoryLimit((String) data.get("categoryLimit"));
-            ruleList.add(dto);
+        List<CalcRuleDTO> ruleList = new ArrayList<>();
+        if (dto.getRuleList() != null) {
+            for (CalcRuleItemDTO item : dto.getRuleList()) {
+                CalcRuleDTO dtoItem = new CalcRuleDTO();
+                dtoItem.setRuleType(item.getRuleType());
+                dtoItem.setRuleCondition(item.getRuleCondition());
+                dtoItem.setRuleDiscount(item.getRuleDiscount());
+                dtoItem.setIsStackable(item.getIsStackable());
+                dtoItem.setCategoryLimit(item.getCategoryLimit());
+                ruleList.add(dtoItem);
+            }
         }
 
         CalcResult result = calculatorService.calculate(goodsList, ruleList);
@@ -84,60 +91,52 @@ public class CalcPlanController {
     /**
      * 保存凑单方案
      *
-     * @param request 请求参数 {planName, goodsList, ruleList, totalAmount, totalDiscount, finalAmount, riskTags}
+     * @param dto 请求参数
      * @param httpRequest HTTP请求
      * @return 保存结果
      */
     @PostMapping("/save")
     @Transactional(rollbackFor = Exception.class)
-    public Result<Long> savePlan(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
+    public Result<Long> savePlan(@Valid @RequestBody CalcPlanSaveDTO dto, HttpServletRequest httpRequest) {
         Long userId = (Long) httpRequest.getAttribute("userId");
         Long tenantId = (Long) httpRequest.getAttribute("tenantId");
-
-        String planName = (String) request.get("planName");
-        BigDecimal totalAmount = new BigDecimal(request.get("totalAmount").toString());
-        BigDecimal totalDiscount = new BigDecimal(request.get("totalDiscount").toString());
-        BigDecimal finalAmount = new BigDecimal(request.get("finalAmount").toString());
-        String riskTags = (String) request.get("riskTags");
 
         // 保存方案主表
         CalcPlan plan = new CalcPlan();
         plan.setTenantId(tenantId);
         plan.setUserId(userId);
-        plan.setPlanName(planName);
-        plan.setTotalAmount(totalAmount);
-        plan.setTotalDiscount(totalDiscount);
-        plan.setFinalAmount(finalAmount);
-        plan.setRiskTags(riskTags);
+        plan.setPlanName(dto.getPlanName());
+        plan.setTotalAmount(dto.getTotalAmount());
+        plan.setTotalDiscount(dto.getTotalDiscount());
+        plan.setFinalAmount(dto.getFinalAmount());
+        plan.setRiskTags(dto.getRiskTags());
         plan.setStatus(1);
         calcPlanMapper.insert(plan);
 
         // 保存商品子表
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> goodsListData = (List<Map<String, Object>>) request.get("goodsList");
-        for (Map<String, Object> data : goodsListData) {
+        for (CalcPlanGoodsItemDTO item : dto.getGoodsList()) {
             CalcPlanGoods goods = new CalcPlanGoods();
             goods.setPlanId(plan.getId());
-            goods.setGoodsName((String) data.get("goodsName"));
-            goods.setGoodsLink((String) data.get("goodsLink"));
-            goods.setPlatform((String) data.get("platform"));
-            goods.setUnitPrice(new BigDecimal(data.get("unitPrice").toString()));
-            goods.setQuantity(((Number) data.get("quantity")).intValue());
+            goods.setGoodsName(item.getGoodsName());
+            goods.setGoodsLink(item.getGoodsLink());
+            goods.setPlatform(item.getPlatform());
+            goods.setUnitPrice(item.getUnitPrice());
+            goods.setQuantity(item.getQuantity());
             calcPlanGoodsMapper.insert(goods);
         }
 
         // 保存规则子表
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> ruleListData = (List<Map<String, Object>>) request.get("ruleList");
-        for (Map<String, Object> data : ruleListData) {
-            CalcRule rule = new CalcRule();
-            rule.setPlanId(plan.getId());
-            rule.setRuleType((String) data.get("ruleType"));
-            rule.setRuleCondition(new BigDecimal(data.get("ruleCondition").toString()));
-            rule.setRuleDiscount(new BigDecimal(data.get("ruleDiscount").toString()));
-            rule.setIsStackable(((Number) data.get("isStackable")).intValue());
-            rule.setCategoryLimit((String) data.get("categoryLimit"));
-            calcRuleMapper.insert(rule);
+        if (dto.getRuleList() != null) {
+            for (CalcRuleItemDTO item : dto.getRuleList()) {
+                CalcRule rule = new CalcRule();
+                rule.setPlanId(plan.getId());
+                rule.setRuleType(item.getRuleType());
+                rule.setRuleCondition(item.getRuleCondition());
+                rule.setRuleDiscount(item.getRuleDiscount());
+                rule.setIsStackable(item.getIsStackable());
+                rule.setCategoryLimit(item.getCategoryLimit());
+                calcRuleMapper.insert(rule);
+            }
         }
 
         return Result.success(plan.getId());
