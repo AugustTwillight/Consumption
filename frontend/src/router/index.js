@@ -10,49 +10,45 @@ const routes = [
   },
   {
     path: '/',
-    name: 'Home',
-    component: () => import('@/views/home/Home.vue'),
+    name: 'Layout',
+    component: () => import('@/layout/index.vue'),
     meta: { requiresAuth: true },
     children: [
       {
         path: '',
         name: 'Dashboard',
-        component: () => import('@/views/home/Dashboard.vue')
+        component: () => import('@/views/dashboard/Dashboard.vue'),
+        meta: { title: '首页概览' }
       },
       {
-        path: 'calc',
-        name: 'Calc',
-        component: () => import('@/views/calc/Calc.vue')
+        path: 'calc-plan',
+        name: 'CalcPlan',
+        component: () => import('@/views/calc-plan/CalcPlan.vue'),
+        meta: { title: 'AI凑单计算器' }
       },
       {
         path: 'monitor',
         name: 'Monitor',
-        component: () => import('@/views/monitor/Monitor.vue')
+        component: () => import('@/views/monitor/Monitor.vue'),
+        meta: { title: '价格监控' }
       },
       {
         path: 'bill',
         name: 'Bill',
-        component: () => import('@/views/bill/Bill.vue')
+        component: () => import('@/views/bill/Bill.vue'),
+        meta: { title: '消费账单' }
       },
       {
         path: 'community',
         name: 'Community',
-        component: () => import('@/views/community/Community.vue')
-      },
-      {
-        path: 'msg',
-        name: 'Message',
-        component: () => import('@/views/msg/Message.vue')
-      },
-      {
-        path: 'sync',
-        name: 'Sync',
-        component: () => import('@/views/sync/Sync.vue')
+        component: () => import('@/views/community/Community.vue'),
+        meta: { title: '社区分享' }
       },
       {
         path: 'point',
         name: 'Point',
-        component: () => import('@/views/point/Point.vue')
+        component: () => import('@/views/point/Point.vue'),
+        meta: { title: '积分中心' }
       }
     ]
   }
@@ -67,7 +63,7 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   
-  if (to.meta.requiresAuth && !userStore.token) {
+  if (to.meta.requiresAuth !== false && !userStore.token) {
     next('/login')
   } else if (to.path === '/login' && userStore.token) {
     next('/')

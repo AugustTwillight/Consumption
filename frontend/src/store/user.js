@@ -7,12 +7,20 @@ export const useUserStore = defineStore('user', () => {
 
   const setToken = (newToken) => {
     token.value = newToken
-    localStorage.setItem('token', newToken)
+    if (newToken) {
+      localStorage.setItem('token', newToken)
+    } else {
+      localStorage.removeItem('token')
+    }
   }
 
   const setUserInfo = (info) => {
     userInfo.value = info
-    localStorage.setItem('userInfo', JSON.stringify(info))
+    if (info) {
+      localStorage.setItem('userInfo', JSON.stringify(info))
+    } else {
+      localStorage.removeItem('userInfo')
+    }
   }
 
   const logout = () => {
@@ -28,5 +36,11 @@ export const useUserStore = defineStore('user', () => {
     setToken,
     setUserInfo,
     logout
+  }
+}, {
+  persist: {
+    key: 'smart-consume-user',
+    storage: localStorage,
+    paths: ['token', 'userInfo']
   }
 })
