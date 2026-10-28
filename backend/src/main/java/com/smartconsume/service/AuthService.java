@@ -6,6 +6,7 @@ import com.smartconsume.common.constant.Constants;
 import com.smartconsume.common.exception.BusinessException;
 import com.smartconsume.common.redis.RedisService;
 import com.smartconsume.common.result.ResultCode;
+import com.smartconsume.common.service.RateLimitService;
 import com.smartconsume.common.util.JwtUtil;
 import com.smartconsume.entity.SysUser;
 import com.smartconsume.mapper.SysUserMapper;
@@ -22,11 +23,13 @@ public class AuthService {
     private final SysUserMapper sysUserMapper;
     private final JwtUtil jwtUtil;
     private final RedisService redisService;
+    private final RateLimitService rateLimitService;
 
-    public AuthService(SysUserMapper sysUserMapper, JwtUtil jwtUtil, RedisService redisService) {
+    public AuthService(SysUserMapper sysUserMapper, JwtUtil jwtUtil, RedisService redisService, RateLimitService rateLimitService) {
         this.sysUserMapper = sysUserMapper;
         this.jwtUtil = jwtUtil;
         this.redisService = redisService;
+        this.rateLimitService = rateLimitService;
     }
 
     /**
@@ -37,6 +40,12 @@ public class AuthService {
      * @return Token
      */
     public String login(String username, String password) {
+        // 检查登录失败限流（同一用户名15分钟内最多失败5次）
+        String failKey = "login:fail:" + username;
+        if (rateLimitService.isLimit(failKey, 5, 15 * 60)) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED.getCode(), "登录失败次数过多，请15分钟后再试");
+        }
+
         // 查询用户
         LambdaQueryWrapper<SysUser> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(SysUser::getUsername, username)
@@ -44,6 +53,7 @@ public class AuthService {
         SysUser user = sysUserMapper.selectOne(queryWrapper);
 
         if (user == null) {
+            // 登录失败，限流计数已在 isLimit 中增加
             throw new BusinessException(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
         }
 
@@ -54,8 +64,12 @@ public class AuthService {
 
         // 验证密码
         if (!BCrypt.checkpw(password, user.getPassword())) {
+            // 登录失败，限流计数已在 isLimit 中增加
             throw new BusinessException(ResultCode.UNAUTHORIZED.getCode(), "用户名或密码错误");
         }
+
+        // 登录成功，清除失败记录
+        rateLimitService.resetLimit(failKey);
 
         // 生成Token
         String token = jwtUtil.generateToken(user.getId(), user.getTenantId());
