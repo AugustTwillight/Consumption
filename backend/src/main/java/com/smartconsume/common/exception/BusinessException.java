@@ -1,0 +1,25 @@
+package com.smartconsume.common.exception;
+
+import com.smartconsume.common.result.ResultCode;
+import lombok.Getter;
+
+/**
+ * 自定义业务异常类
+ */
+@Getter
+public class BusinessException extends RuntimeException {
+    private final int code;
+    private final String message;
+
+    public BusinessException(ResultCode resultCode) {
+        super(resultCode.getMessage());
+        this.code = resultCode.getCode();
+        this.message = resultCode.getMessage();
+    }
+
+    public BusinessException(int code, String message) {
+        super(message);
+        this.code = code;
+        this.message = message;
+    }
+}
