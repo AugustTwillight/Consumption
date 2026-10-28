@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.lang.ArithmeticException;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +41,18 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
         log.warn("参数绑定异常: {}", message);
         return Result.fail(ResultCode.VALIDATE_FAILED.getCode(), message);
+    }
+
+    @ExceptionHandler(ArithmeticException.class)
+    public Result<Void> handleArithmeticException(ArithmeticException e) {
+        log.error("数学计算异常: ", e);
+        return Result.fail(ResultCode.FAILED.getCode(), "计算异常，请检查输入数据");
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public Result<Void> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("非法参数异常: {}", e.getMessage());
+        return Result.fail(ResultCode.VALIDATE_FAILED.getCode(), "非法参数: " + e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

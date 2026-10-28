@@ -232,11 +232,20 @@ public class CalculatorService {
 
             // 简单分摊：按商品金额比例分摊优惠
             BigDecimal goodsTotal = goods.getUnitPrice().multiply(new BigDecimal(goods.getQuantity()));
-            BigDecimal ratio = goodsTotal.divide(totalAmount, 4, RoundingMode.HALF_UP);
+            BigDecimal ratio;
+            if (totalAmount != null && totalAmount.compareTo(BigDecimal.ZERO) > 0) {
+                ratio = goodsTotal.divide(totalAmount, 4, RoundingMode.HALF_UP);
+            } else {
+                ratio = BigDecimal.ZERO;
+            }
             BigDecimal discountShare = totalDiscount.multiply(ratio).setScale(2, RoundingMode.HALF_UP);
             BigDecimal actualPaid = goodsTotal.subtract(discountShare).setScale(2, RoundingMode.HALF_UP);
 
-            allocation.setDiscountedPrice(goods.getUnitPrice().subtract(discountShare.divide(new BigDecimal(goods.getQuantity()), 2, RoundingMode.HALF_UP)));
+            BigDecimal discountedPricePerUnit = BigDecimal.ZERO;
+            if (goods.getQuantity() != null && goods.getQuantity() > 0) {
+                discountedPricePerUnit = discountShare.divide(new BigDecimal(goods.getQuantity()), 2, RoundingMode.HALF_UP);
+            }
+            allocation.setDiscountedPrice(goods.getUnitPrice().subtract(discountedPricePerUnit));
             allocation.setActualPaid(actualPaid.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : actualPaid);
             allocations.add(allocation);
         }

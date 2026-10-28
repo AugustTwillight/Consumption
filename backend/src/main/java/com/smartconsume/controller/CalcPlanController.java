@@ -14,6 +14,7 @@ import com.smartconsume.service.CalculatorService.CalcPlanGoodsDTO;
 import com.smartconsume.service.CalculatorService.CalcResult;
 import com.smartconsume.service.CalculatorService.CalcRuleDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -88,6 +89,7 @@ public class CalcPlanController {
      * @return 保存结果
      */
     @PostMapping("/save")
+    @Transactional(rollbackFor = Exception.class)
     public Result<Long> savePlan(@RequestBody Map<String, Object> request, HttpServletRequest httpRequest) {
         Long userId = (Long) httpRequest.getAttribute("userId");
         Long tenantId = (Long) httpRequest.getAttribute("tenantId");
